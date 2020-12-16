@@ -28,138 +28,156 @@ format_d: .string " %d"
 .global run_func
 .type run_func, @function
 run_func:
-    leaq -50(%rdi), %rcx # compute xi = x -50
-    cmpq $10, %rcx       # compare xi: 10
-    ja .L9               # if >, go to default case
-    jmp *.L10(,%rcx, 8)  #goto jt[xi]
+    pushq   %rbp              
+    movq    %rsp, %rbp
+    pushq   %r12
+    movq    %rsi, %r12
+    pushq   %r13
+    movq    %rdx, %r13
+    leaq    -50(%rdi), %rcx 3 # Compute xi = x - 50
+    cmpq    $10, %rcx 
+    ja .L9 
+    jmp *.L10(,%rcx,8)
+
+run_func_finish:
+    popq    %r13
+    popq    %r12
+    movq    %rbp, %rsp
+    popq    %rbp
+    ret
 
     .L4:
-        movq %rsi, %rdi           # move rsi to rdi
+        movq %r12, %rdi           # move rsi to rdi
         call pstrlen              # call to length function with rdi
-        movq %rax, %r8            # save length 1
+        movb %rax, %sil           # save length 1
         movq %rdx, %rdi           # put argument 3 to rdi - argument 2
+        leaq (%rsp, 1, 8), %rdi
+        push %rsi
         call pstrlen
         movq $format_length, %rdi # argument 1 as format length
-        movq %r8, %rsi            # argument 2 as length 1
-        movq %rax, %rdx           # argument 3 as length 2
+        movb %rax, %dl           # argument 3 as length 2
         movq $0, %rax
+        popq %rsi
         call printf
+        jmp run_func_finish
 
     .L5:
-        movq $format_c, %rdi
-        subq $8, %rsp
-        movq %rsi, %r8
-        movq %rsp, %rsi
-        movq $0, %rax
-        call scanf
-        movq (%rsi), %r9 # oldChar
-        movq $0, %rax
-        call scanf
-        movq (%rsi), %rcx # newChar
-        addq $8, %rsp     # rsp points to rbp
-        movq %r8, %rdi
-        movq %r9, %rsi    # oldChar
-        movq %rdx, %r8    # save pstring 2 at r8
-        movq %rcx, %rdx   # newChar
-        call replaceChar
-        movq %rax, %r9    # new pstring 1
-        movq %r8, %rdi
-        call replaceChar
-        movq %rax, %r8    # new pstring 2
-        # printf - 5 arguments (string, oldChar, newChar, new string 1, new string 2)
-        movq $format_replace, %rdi
-        movq %r9, %rcx
-        movq $0, %rax
-        call printf
+        movq    $format_c, %rdi 
+        subq    $8, %rsp
+        movq    %rsp, %rsi
+        movq    $0, %rax
+        call    scanf
+        movq    $format_c, %rdi
+        leaq    1(%rsp), %rsi
+        movq    $0, %rax
+        call    scanf
+        movb    (%rsp), %sil
+        movb    1(%rsp), %dl
+        movq    %r12, %rdi
+        call    replaceChar
+        movb    (%rsp), %sil
+        movb    1(%rsp),%dl
+        movq    %r13, %rdi
+        call    replaceChar
+        pushq   %rax
+        movq    $format_replace, %rdi
+        movb    (%rsp), %sil
+        movb    1(%rsp),%dl
+        # leaq    1(%r12), %rcx            # %rcx = p1->str
+        # leaq    1(%r13), %r8 
+        popq    %rcx
+        movq    %rax, %r8
+        movq    $0, %rax
+        call    printf
+        addq    $8, %rsp
+        jmp     run_func_finish
 
-    .L6:
+    .L6: # case 53
+        # scan index i
         movq $format_d, %rdi
         subq $8, %rsp
-        movq %rsi, %r9   # pstring 1
         movq %rsp, %rsi
         movq $0, %rax
         call scanf
-        movq (%rsi), %r8 # index i
+        # scan index j
+        leaq 1(%rsp), %rsi
+        movq $format_c, %rdi
         movq $0, %rax
         call scanf
-        movq (%rsi), %rcx # argument 3 to cpy - index j
-        addq $8, %rsp
-        movq %rdx, %rdi   # argument 1 to cpy - pstring 2
-        movq %r9, %rsi    # argument 2 to cpy - pstring 1
-        movq %r8, %rdx    # argument 3 to cpy - index i
+        movq %r13, %rdi         # pstring 2 to rdi
+        movq %r12, %rsi         # pstring 1 to rsi
+        movb (%rsp), %dl        # index i to dl
+        movb 1(%rsp), %cl       # index j to cl
         call pstrijcpy
-        movq %rax, %rdi
+        movq %rax, %rdi         # new pstring 2 to rdi
+        pushq %rdi              # save pstring 2 in stack
         call pstrlen
-        # printf destination- length and string
-        movq %rdi, %rdx
-        movq $format_copy, %rdi
+        popq %rdi               
+        movq %rdi, %rdx         # pstring 2 to rdx
+        movq $format_copy, %rdi 
         movq %rax, %rsi
         movq $0, %rax
         call printf
-        # printf destination- length and string
-        movq %r9, %rdi
+        movq %r12, %rdi
         call pstrlen
         movq $format_copy, %rdi
         movq %rax, %rsi
-        movq %r9, %rdx
+        movq %r12, %rdx
         movq $0, %rax
         call printf
+        addq $8, %rsp
+        jmp run_func_finish
 
     .L7:
-        movq %rsi, %rdi         # pointer to pstring 1
+        movq %r12, %rdi         # pointer to pstring 1
         call swapCase
-        movq %rdx, %r8          # pointer to pstring 2 in r8
-        movq %rax, %rdx         # argument 3 to printf as rdx
+        pushq %rax
+        movq %rax, %rdi
+        call pstrlen
+        # movq %rax, %rsi         # argument 2 to printf as rsi
+        movq $format_swap, %rdi # argument 1 to printf as rdi
+        movq %rax, %rsi
+        popq %rdx
+        movq $0, %rax
+        call printf
+        movq %r13, %rdi          # argument 1 to swap - pointer to pstring 2
+        call swapCase
+        pushq %rax
         call pstrlen
         movq %rax, %rsi         # argument 2 to printf as rsi
         movq $format_swap, %rdi # argument 1 to printf as rdi
         movq $0, %rax
+        popq %rdx
         call printf
-        movq %r8, %rdi          # argument 1 to swap - pointer to pstring 2
-        call swapCase
-        movq %rax, %rdx
-        call pstrlen
-        movq %rax, %rsi         # argument 2 to printf as rsi
-        movq $format_swap, %rdi # argument 1 to printf as rdi
-        movq $0, %rax
-        call printf
+        jmp run_func_finish
 
     .L8:
-        pushq %rdi          # caller saver backup
-        pushq %rsi          # caller saver backup
-        pushq %rdx          # caller saver backup
-        pushq %rcx          # caller saver backup
         # scan index i
+        movq $format_d, %rdi
         subq $8, %rsp
         movq %rsp, %rsi
-        movq $format_d, %rdi
         movq $0, %rax
         call scanf
-        pushq %r12         
-        movl (%rsp), %r12d  # save index i
         # scan index j
+        leaq 1(%rsp), %rsi
+        movq $format_c, %rdi
         movq $0, %rax
         call scanf
-        pushq %r13
-        movl (%rsp), %r13d  # save index j
-        leaq (%rsp, 6, 8), %rdi
-        leaq (%rsp, 5, 8), %rsi
-        movq %r12, %rdx
-        movq %r13, %rcx
+        movq %r12, %rdi         # pstring 1 to rdi
+        movq %r13, %rsi         # pstring 2 to rsi
+        movb (%rsp), %dl        # index i to dl
+        movb 1(%rsp), %cl       # index j to cl
         call pstrijcmp
         movq $format_compare, %rdi
         movq %rax, %rsi
+        movq $0, %rax
         call printf
-
-        popq %r13
-        popq %r12
-        popq %rcx
-        popq %rdx
-        popq %rsi
-        popq %rdi
+        addq $8, %rax
+        jmp run_func_finish
 
     .L9:
         movq $format_invalid, %rdi
+        movq $0, %rax
         call printf
 
 
