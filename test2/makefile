@@ -1,5 +1,5 @@
 a.out: main.o run_main.o func_select.o pstring.o
-	gcc -g -no-pie a.out main.o run_main.o func_select.o pstring.o
+	gcc -g -no-pie -o a.out main.o run_main.o func_select.o pstring.o
 
 main.o: main.c pstring.h
 	gcc -g -c -o main.o main.c
@@ -15,3 +15,4 @@ pstring.o: pstring.s
 
 clean:
 	rm -f *.o a.out
+

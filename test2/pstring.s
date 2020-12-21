@@ -40,7 +40,7 @@ pstrijcpy:
 	
     movq	$0, %r9
 	cmpq	%rdx, %r9				
-	jb		.errorFinish
+	jg		.errorFinish
 	
 	pushq	%rdi					# save pstring 2				
 	movq	%rsi, %rdi
@@ -128,17 +128,21 @@ swapCase:
 
 .type pstrijcmp @function
 pstrijcmp:
-    call    pstrlen        	# find the length of pstring 2
-    cmpq    %rax, %rcx    	# if j is bigger than length
-	jge    .notOK
-    pushq	%rdi			# save pstring2
-	movq    %rsi, %rdi		# find length of pstring 1
-    call    pstrlen
-	cmpq    %rax, %rcx    	# comparison if pstring 1 length bigger than i
-    jge    .notOK
-    movq    $0, %r8
-    cmpq    %rdx, %r8    	# if i is smaller than 0
-    jg    	.notOK
+    # rdi - pstring 2, rsi - pstring 1, rdx - index i, rcx - index j
+	call 	pstrlen					# find the length of pstring 2
+	cmpq	%rax, %rcx				# if j is bigger than length
+	jge		.notOK
+	
+    movq	$0, %r9
+	cmpq	%rdx, %r9				
+	jg		.notOK
+	
+	pushq	%rdi					# save pstring 2				
+	movq	%rsi, %rdi
+	call	pstrlen
+	cmpq	%rax, %rcx				# if i is smaller than 0
+	jge		.notOK
+
 	popq	% rdi
     inc    	%rdi
     inc    	%rsi
